@@ -1,3 +1,2 @@
-#过滤项目文件
-dist/
+﻿#过滤项目文件
 node_modules/
