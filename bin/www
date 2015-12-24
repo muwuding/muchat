@@ -1,58 +1,127 @@
 #!/usr/bin/env node
 
-/**
- * Module dependencies.
- */
-
+//加载模块依赖
 var app = require('../app');
 var debug = require('debug')('muchat:server');
 var http = require('http');
+var scoket = require('socket.io');
 
-/**
- * Get port from environment and store in Express.
- */
+//创建server服务
+var server = http.createServer(app);
+var io = scoket.listen(server);
 
+//从环境中获得端口参数
 var port = normalizePort(process.env.PORT || '3000');
 app.set('port', port);
 
-/**
- * Create HTTP server.
- */
+//设置日志级别
+io.set('log level', 1);
 
-var server = http.createServer(app);
-var io = require('socket.io').listen(server);
-/**
- * Listen on provided port, on all network interfaces.
- */
+//WebSocket连接监听
+io.on('connection', function (socket) {
+  socket.emit('open');//通知客户端已连接
+
+  setInterval(function(){
+
+    var obj = {};
+    obj['text']='9999';
+    obj['author']='System';
+    obj['type']='welcome';
+
+    //返回欢迎语，system为自定义命令
+    socket.emit('system', function(data) {
+      if(req.session.userToken === data.userId) {
+        return data;
+      }
+
+
+    }); //向客户端发送一个‘system’的命令，obj是传递的json数据，客户端对应
+
+    //广播新用户已登陆
+    socket.broadcast.emit('system',obj); //全站广播
+  },1000);
+
+  /*// 打印握手信息
+  // console.log(socket.handshake);
+
+  // 构造客户端对象
+  var client = {
+    socket:socket,
+    name:false,
+    color:getColor()
+  }
+
+  // 对message事件的监听
+  socket.on('message', function(msg){
+    var obj = {
+      time:getTime(),
+      color:client.color
+    };
+
+    // 判断是不是第一次连接，以第一条消息作为用户名
+    if(!client.name){
+      client.name = msg;
+      obj['text']=client.name;
+      obj['author']='System';
+      obj['type']='welcome';
+      console.log(client.name + ' login');
+
+      //返回欢迎语，system为自定义命令
+      socket.emit('system',obj); //向客户端发送一个‘system’的命令，obj是传递的json数据，客户端对应
+
+      //广播新用户已登陆
+      socket.broadcast.emit('system',obj); //全站广播
+    }else{
+
+      //如果不是第一次的连接，正常的聊天消息
+      obj['text']=msg;
+      obj['author']=client.name;
+      obj['type']='message';
+
+      console.log(client.name + ' say: ' + msg);
+
+      // 返回消息（可以省略）
+      socket.emit('message',obj);
+      // 广播向其他用户发消息
+      socket.broadcast.emit('message',obj);
+    }
+  });
+
+  //监听退出事件
+  socket.on('disconnect', function () {
+    var obj = {
+      time:getTime(),
+      color:client.color,
+      author:'System',
+      text:client.name,
+      type:'disconnect'
+    };
+
+    // 广播用户已退出
+    socket.broadcast.emit('system',obj);
+    console.log(client.name + 'Disconnect');
+  });*/
+});
 
 server.listen(port);
 server.on('error', onError);
 server.on('listening', onListening);
 
-/**
- * Normalize a port into a number, string, or false.
- */
-
+//格式化
 function normalizePort(val) {
+
   var port = parseInt(val, 10);
 
   if (isNaN(port)) {
-    // named pipe
     return val;
   }
-
   if (port >= 0) {
-    // port number
     return port;
   }
-
   return false;
 }
 
-/**
- * Event listener for HTTP server "error" event.
- */
-
+//错误处理
 function onError(error) {
   if (error.syscall !== 'listen') {
     throw error;
@@ -77,10 +146,7 @@ function onError(error) {
   }
 }
 
-/**
- * Event listener for HTTP server "listening" event.
- */
-
+//时间监听
 function onListening() {
   var addr = server.address();
   var bind = typeof addr === 'string'
@@ -89,101 +155,13 @@ function onListening() {
   debug('Listening on ' + bind);
 }
 
-//设置日志级别
-io.set('log level', 1);
-
-//webSocket连接监听
-io.on('connection', function(socket) {
-  socket.emit('open'); //通知客户端已连接
-
-  //打印握手信息
-  console.log(socket.handshake);
-
-  //构造客户端对象
-  var client = {
-    socket: socket,
-    name: false,
-    color: getColor()
-  }
-
-  //对message事件的监听
-  socket.on('message', function(msg){
-    var obj = {time:getTime(),color:client.color};
-
-    // 判断是不是第一次连接，以第一条消息作为用户名
-    if(!client.name){
-      client.name = msg;
-      obj['text']=client.name;
-      obj['author']='System';
-      obj['type']='welcome';
-      console.log(client.name + ' login');
-
-      //返回欢迎语
-      socket.emit('system',obj);
-      //广播新用户已登陆
-      socket.broadcast.emit('system',obj);
-    }
-    else{
-
-      //如果不是第一次的连接，正常的聊天消息
-      obj['text']=msg;
-      obj['author']=client.name;
-      obj['type']='message';
-      console.log(client.name + ' say: ' + msg);
-
-      // 返回消息（可以省略）
-      socket.emit('message',obj);
-      // 广播向其他用户发消息
-      socket.broadcast.emit('message',obj);
-    }
-  });
-
-  //监听出退事件
-  socket.on('disconnect', function () {
-    var obj = {
-      time:getTime(),
-      color:client.color,
-      author:'System',
-      text:client.name,
-      type:'disconnect'
-    };
-
-    // 广播用户已退出
-    socket.broadcast.emit('system',obj);
-    console.log(client.name + 'Disconnect');
-  });
-});
-
-//express基本配置
-app.configure(function(){
-  app.set('port', process.env.PORT || 3000);
-  app.set('views', __dirname + '/views');
-  app.use(express.favicon());
-  app.use(express.logger('dev'));
-  app.use(express.bodyParser());
-  app.use(express.methodOverride());
-  app.use(app.router);
-  app.use(express.static(path.join(__dirname, 'public')));
-});
-
-app.configure('development', function(){
-  app.use(express.errorHandler());
-});
-
-// 指定webscoket的客户端的html文件
-app.get('/', function(req, res){
-  res.sendfile('views/chat.html');
-});
-
-server.listen(app.get('port'), function(){
-  console.log("Express server listening on port " + app.get('port'));
-});
-
+//格式化时间
 var getTime=function(){
   var date = new Date();
   return date.getHours()+":"+date.getMinutes()+":"+date.getSeconds();
 }
 
+//颜色函数，取色规则是取余
 var getColor=function(){
   var colors = ['aliceblue','antiquewhite','aqua','aquamarine','pink','red','green',
                 'orange','blue','blueviolet','brown','burlywood','cadetblue'];
