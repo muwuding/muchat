@@ -10,6 +10,13 @@ var scoket = require('socket.io');
 var server = http.createServer(app);
 var io = scoket.listen(server);
 
+/*var mio = require('socket.io/socket.io');
+//去连java
+var clientScoket = mio.connect('http://192.168.1.129:8082');
+clientScoket.on('open',function(){
+  console.log('连接成功');
+});*/
+
 //从环境中获得端口参数
 var port = normalizePort(process.env.PORT || '3000');
 app.set('port', port);
@@ -19,29 +26,21 @@ io.set('log level', 1);
 
 //WebSocket连接监听
 io.on('connection', function (socket) {
+
   socket.emit('open');//通知客户端已连接
 
-  setInterval(function(){
+  var obj = {};
+  obj['text']='9999';
+  obj['author']='System';
+  obj['type']='welcome';
 
-    var obj = {};
-    obj['text']='9999';
-    obj['author']='System';
-    obj['type']='welcome';
+  //返回欢迎语，system为自定义命令
+  socket.emit('system', obj); //向客户端发送一个‘system’的命令，obj是传递的json数据，客户端对应
 
-    //返回欢迎语，system为自定义命令
-    socket.emit('system', function(data) {
-      if(req.session.userToken === data.userId) {
-        return data;
-      }
+  //广播新用户已登陆
+  socket.broadcast.emit('system',obj); //全站广播
 
-
-    }); //向客户端发送一个‘system’的命令，obj是传递的json数据，客户端对应
-
-    //广播新用户已登陆
-    socket.broadcast.emit('system',obj); //全站广播
-  },1000);
-
-  /*// 打印握手信息
+  // 打印握手信息
   // console.log(socket.handshake);
 
   // 构造客户端对象
@@ -100,7 +99,7 @@ io.on('connection', function (socket) {
     // 广播用户已退出
     socket.broadcast.emit('system',obj);
     console.log(client.name + 'Disconnect');
-  });*/
+  });
 });
 
 server.listen(port);
